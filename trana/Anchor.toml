@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-trana = "3rLS8GWvB9a7hx5n43sxY69emunxD2nCM21euy3KLXgS"
+trana = "En2EGbw2JuJkQbmgueXEN2XaiBjHvzf4bPwCrUyTqMNf"
 
 [provider]
 cluster = "localnet"
