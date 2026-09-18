@@ -1,16 +1,15 @@
-
 use {
     anchor_lang::{
+        AccountDeserialize, InstructionData, ToAccountMetas,
         prelude::Pubkey,
         solana_program::{instruction::Instruction, system_program},
-        AccountDeserialize, InstructionData, ToAccountMetas,
     },
     litesvm::LiteSVM,
-    awesome_solana::{
-    keypair::Keypair,
-    message::{Message, VersionedMessage},
-    signer::Signer,
-    transaction::versioned::VersionedTransaction,
+    solana_awesome::{
+        keypair::Keypair,
+        message::{Message, VersionedMessage},
+        signer::Signer,
+        transaction::versioned::VersionedTransaction,
     },
 };
 
@@ -18,16 +17,9 @@ use {
 fn test_initialize() {
     let program_id = trana::id();
     let payer = Keypair::new();
-    let counter = Pubkey::find_program_address(
-        &[trana::constants::COUNTER_SEED],
-        &program_id,
-    )
-    .0;
+    let counter = Pubkey::find_program_address(&[trana::constants::COUNTER_SEED], &program_id).0;
     let mut svm = LiteSVM::new();
-    let bytes = include_bytes!(concat!(
-        env!("CARGO_TARGET_TMPDIR"),
-        "/../deploy/trana.so"
-    ));
+    let bytes = include_bytes!(concat!(env!("CARGO_TARGET_TMPDIR"), "/../deploy/trana.so"));
     svm.add_program(program_id, bytes).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
 
