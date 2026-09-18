@@ -8,5 +8,6 @@ test-ledger
 .surfpool
 
 .agents/
+.omo/
 .commandcode/
 skills-lock.json

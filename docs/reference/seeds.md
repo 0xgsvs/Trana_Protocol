@@ -1,0 +1,117 @@
+# PDA Seeds & Constants
+
+Every address the program derives comes from five literals in `constants.rs`.
+Matching these exactly is mandatory for any client — a wrong seed produces a
+valid-looking but wrong account.
+
+```rust
+#[constant]
+pub const CONFIG_SEED: &[u8] = b"config";
+
+#[constant]
+pub const TREASURY_SEED: &[u8] = b"treasury";
+
+#[constant]
+pub const LP_POSITION_SEED: &[u8] = b"lp_position";
+
+#[constant]
+pub const POLICY_SEED: &[u8] = b"policy";
+
+#[constant]
+pub const METRIC_SEED: &[u8] = b"metric";
+
+/// Basis-point denominator for `PoolConfig::fee_bps` (1 bp = 1/100 of 1%).
+#[constant]
+pub const FEE_DENOMINATOR: u64 = 10_000;
+```
+
+These are declared with `#[constant]` rather than bare `pub const` so they are
+emitted into the IDL and visible to clients.
+
+## Derivation table
+
+| Account | Seeds | Notes |
+|---|---|---|
+| `PoolConfig` | `[b"config", usdc_mint]` | One pool per mint |
+| treasury | `[b"treasury", config]` | SPL `TokenAccount`, authority = `PoolConfig` PDA |
+| `LpPosition` | `[b"lp_position", config, lp]` | Bound to the LP's key |
+| `Policy` | `[b"policy", config, policy_id_le]` | `policy_id` little-endian |
+| `MetricReport` | `[b"metric", target_id_le, period_id_le]` | **Not** namespaced by config |
+
+The program id is `En2EGbw2JuJkQbmgueXEN2XaiBjHvzf4bPwCrUyTqMNf`.
+
+::: danger Seed literals are frozen
+Changing any literal, or the byte encoding of a `u64` argument, changes every
+derived address and orphans all live accounts. Arguments are positional, so
+reordering instruction parameters is equally destructive.
+:::
+
+## Integer encoding
+
+`policy_id`, `target_id`, and `period_id` are `u64` and enter the seeds as
+little-endian bytes — the same encoding as `.to_le_bytes()` in Rust and
+`BigInt64`-style little-endian writers in clients.
+
+## Client derivation
+
+With `@solana/kit`:
+
+```ts
+import { getProgramDerivedAddress, getAddressEncoder, address } from '@solana/kit'
+
+const PROGRAM_ID = address('En2EGbw2JuJkQbmgueXEN2XaiBjHvzf4bPwCrUyTqMNf')
+const encoder = getAddressEncoder()
+const bytes = (n: bigint): Uint8Array => {
+  const out = new Uint8Array(8)
+  new DataView(out.buffer).setBigUint64(0, n, true) // little-endian
+  return out
+}
+
+const [config] = await getProgramDerivedAddress({
+  programAddress: PROGRAM_ID,
+  seeds: ['config', encoder.encode(usdcMint)],
+})
+
+const [treasury] = await getProgramDerivedAddress({
+  programAddress: PROGRAM_ID,
+  seeds: ['treasury', encoder.encode(config)],
+})
+
+const [lpPosition] = await getProgramDerivedAddress({
+  programAddress: PROGRAM_ID,
+  seeds: ['lp_position', encoder.encode(config), encoder.encode(lp)],
+})
+
+const [policy] = await getProgramDerivedAddress({
+  programAddress: PROGRAM_ID,
+  seeds: ['policy', encoder.encode(config), bytes(policyId)],
+})
+
+const [metricReport] = await getProgramDerivedAddress({
+  programAddress: PROGRAM_ID,
+  seeds: ['metric', bytes(targetId), bytes(periodId)],
+})
+```
+
+Note that `treasury`, `lp_position`, and `policy` all take the **config** PDA as
+a seed, not the mint. Deriving them from the mint directly produces the wrong
+address.
+
+## Consequences of the shapes
+
+**One pool per mint.** `[b"config", usdc_mint]` means the mint determines the
+pool, so no duplicate-pool check is needed — a second `initialize_pool` for the
+same mint fails on the `init` constraint.
+
+**The treasury is authority-by-PDA.** Because it is an SPL token account whose
+authority is the `PoolConfig` PDA, the program moves funds only by reproducing
+`[b"config", usdc_mint, bump]` during a CPI.
+
+**Metrics are global.** Omitting `config` from the metric seeds makes reports
+shared infrastructure: any pool reading a `(target_id, period_id)` pair reads the
+same account, so a report can be consumed by many policies but written only once.
+
+## Related
+
+- [Accounts & State](/protocol/accounts) — the structs behind these addresses
+- [Reference: Instructions & Accounts](/reference/instructions) — which accounts each instruction needs
