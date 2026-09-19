@@ -239,6 +239,13 @@ content, broken diagrams, unreachable pages — rather than rendering details:
   (the two repeat the same literals, and CSS cannot import TypeScript) and
   checks the palette's contrast ratios against WCAG minimums: body text at AAA,
   muted text at AA, accents and the brand button at their minimums.
+- **Component map** — `tests/component-map.test.ts` re-derives, from each
+  instruction's `#[derive(Accounts)]` struct, which program-owned accounts it
+  mutates or creates, and requires the Component map on `/protocol/architecture`
+  to have exactly those edges and no others. The map is the one place whose
+  claims are structural rather than textual, so neither the diagram parser nor
+  the prose checks cover it — an edge pointing at the wrong account, or missing,
+  is invisible to both.
 
 And one check that cannot be a unit test, because the failure it catches is
 invisible to both parsing and markup assertions:

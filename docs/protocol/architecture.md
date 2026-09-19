@@ -7,12 +7,12 @@ the program ever signs for is the pool treasury.
 ## Component map
 
 ```mermaid
-flowchart TD
+flowchart LR
     Admin["Admin"]
     LP["Liquidity Provider"]
     Insured["Insured MFI / FPO"]
     Oracle["Oracle Authority"]
-    Crank["Crank"]
+    Crank["Crank<br/>any signer"]
 
     subgraph Program["Program-owned state"]
         Config["PoolConfig"]
@@ -22,24 +22,48 @@ flowchart TD
     end
 
     subgraph Token["SPL token accounts"]
+        Mint["USDC mint"]
         Treasury["Treasury<br/>authority = PoolConfig"]
         LpAta["LP USDC"]
         InsuredAta["Insured USDC"]
     end
 
     Admin -->|initialize_pool| Config
+    Admin -->|initialize_pool| Treasury
     LP -->|deposit_capital| Config
+    LP -->|deposit_capital| LpPos
+    LP -->|withdraw_capital| Config
     LP -->|withdraw_capital| LpPos
+    Insured -->|buy_policy| Config
     Insured -->|buy_policy| Policy
     Oracle -->|report_metric| Report
+    Crank -->|settle_policy| Config
     Crank -->|settle_policy| Policy
-    Config --> Treasury
+    Crank -.->|reads| Report
+
+    Config -.->|authority| Treasury
+    Mint -.->|namespaces| Config
+    Mint -.->|mint| Treasury
+    Mint -.->|mint| LpAta
+    Mint -.->|mint| InsuredAta
+
     LpAta -.->|deposit| Treasury
     InsuredAta -.->|premium| Treasury
     Treasury -.->|payout| InsuredAta
     Treasury -.->|redemption| LpAta
-    Policy -.->|reads| Report
 ```
+
+Solid edges are what each instruction creates or writes. Five of the six write
+`PoolConfig`, which is why it is the accounting hub rather than one account among
+four. `report_metric` is the exception: it reads `config` only, to check the
+reporter against `oracle_authority`, and moves no tokens.
+
+Dotted arrows are the token movements and the two structural links the program
+rests on: the treasury's authority is the `PoolConfig` PDA, and `PoolConfig`
+itself is namespaced by the USDC mint, which is also the mint of the other three
+token accounts. Transfers are drawn as flows rather than repeated as one edge per
+instruction — the token accounts a handler takes as `mut` are exactly the
+counterparties of those four legs.
 
 ## PDA derivation
 
