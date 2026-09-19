@@ -20,7 +20,6 @@ Program ID: `En2EGbw2JuJkQbmgueXEN2XaiBjHvzf4bPwCrUyTqMNf`
 ```text
 trana/
 ├── Anchor.toml               # cluster, wallet, program id, [scripts] test
-├── mise.toml                 # pinned toolchain
 ├── Cargo.toml                # workspace + release profile
 ├── txtx.yml                  # localnet / devnet environments for the deploy runbook
 ├── programs/trana/
@@ -39,11 +38,16 @@ trana/
 
 ## Toolchain
 
-Everything comes from `mise.toml`; nothing needs installing by hand:
+Everything comes from the repository's `mise.toml`, one directory up; nothing
+needs installing by hand:
 
 ```bash
-mise install     # agave, otter-sec/anchor, surfpool, cargo-nextest, sccache, bun
+mise trust mise.toml   # once per clone: mise gates config files by path
+mise install           # agave, otter-sec/anchor, surfpool, cargo-nextest, sccache, bun
 ```
+
+`mise` finds that file from anywhere in the repository, so the commands below work
+from `trana/` or from the root.
 
 The Anchor pin is the `otter-sec/anchor` fork, and the Rust channel plus
 components come from `../rust-toolchain.toml`. `sccache` is wired in as the

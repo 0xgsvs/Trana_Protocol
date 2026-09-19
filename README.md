@@ -19,6 +19,7 @@ frontend, SDK, or indexer.
 ├── docs/                      # the documentation site
 ├── LOI_DELIVERABLE_TRANA.md   # original design intent
 ├── AGENTS.md                  # repo notes for coding agents
+├── mise.toml                  # pinned toolchain (agave, anchor fork, surfpool, nextest, sccache, bun)
 ├── rust-toolchain.toml        # pinned Rust channel + components
 └── .cargo/config.toml         # sccache as the rustc wrapper
 ```
@@ -34,7 +35,7 @@ Each directory documents itself:
 ## Quick start
 
 ```bash
-# The program — `mise.toml` lives in trana/, so mise install runs there.
+# The program.
 cd trana
 mise install                 # agave, anchor, surfpool, nextest, sccache, bun
 anchor build                 # -> target/deploy/trana.so

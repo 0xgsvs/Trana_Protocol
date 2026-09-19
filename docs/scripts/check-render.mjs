@@ -15,17 +15,17 @@
  * On Linux/Windows, point Bun at a Chrome/Chromium binary if it is not on PATH:
  *   BUN_CHROME_PATH=/path/to/chromium bun run test:render
  */
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-const BASE = process.argv[2] ?? process.env.DOCS_URL ?? 'http://localhost:5173'
-const DOCS = resolve(import.meta.dirname, '..')
+const BASE = Bun.argv[2] ?? Bun.env.DOCS_URL ?? 'http://localhost:5173'
+// Bun has no path module; the file APIs normalise `..` for us.
+const DOCS = `${import.meta.dir}/..`
 const TIMEOUT_MS = 15_000
 const POLL_MS = 150
 
 /** Pages to check, taken from the site's own nav + sidebar. */
-function pagesFromConfig() {
-  const config = readFileSync(resolve(DOCS, '.vitepress/config.mts'), 'utf8')
+async function pagesFromConfig() {
+  // Bun.file rather than node:fs: this script is a Bun script, and the read is
+  // a one-shot at startup.
+  const config = await Bun.file(`${DOCS}/.vitepress/config.mts`).text()
   const links = [...config.matchAll(/link:\s*'([^']+)'/g)].map((match) => match[1])
   return [...new Set(links)]
 }
@@ -209,7 +209,7 @@ function viewerProblems(viewer, index) {
   return problems
 }
 
-const pages = pagesFromConfig()
+const pages = await pagesFromConfig()
 const failures = []
 const skipped = []
 let totalDiagrams = 0

@@ -12,8 +12,8 @@ Trana_Protocol/
 │   │   ├── src/            # the Anchor program (~1.6k lines of Rust)
 │   │   └── tests/          # LiteSVM integration tests (682 lines, 15 tests)
 │   ├── runbooks/           # surfpool / txtx deploy scaffolding
-│   ├── Anchor.toml
-│   └── mise.toml           # toolchain pins
+│   └── Anchor.toml
+├── mise.toml               # toolchain pins
 ├── LOI_DELIVERABLE_TRANA.md  # design intent (partly stale — see appendix)
 └── docs/                   # this site
 ```

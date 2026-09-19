@@ -6,7 +6,7 @@ connection beyond the toolchain download.
 ## Toolchains
 
 All Rust and Solana toolchains come from `mise`, not from system installs. The
-pins live in `trana/mise.toml`:
+pins live in the repo-root `mise.toml`:
 
 ```toml
 [tools]
@@ -20,6 +20,7 @@ bun = "latest"
 ```
 
 ```bash
+mise trust mise.toml   # once per clone: mise gates config files by path
 mise install
 ```
 
