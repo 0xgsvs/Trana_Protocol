@@ -19,8 +19,9 @@ bun run build       # production build -> .vitepress/dist
 bun run preview     # serve the built output
 bun run test        # vitest: sidebar integrity, diagram validity, source drift
 bun run test:render # browser check: diagrams drawn whole, viewer opens and closes
+bun run typecheck   # tsc --noEmit over the site, theme, tests and scripts
 bun run lint        # oxlint
-bun run check       # lint + test + build
+bun run check       # lint + typecheck + test + build
 ```
 
 `bun run check` is the gate to pass before considering the docs sound.
@@ -46,12 +47,19 @@ overlaps a bun builtin, the specialist wins:
 | Bundler | Rolldown (Vite 8's bundler) |
 | Parser / transformer | oxc, via Rolldown; linter is `oxlint` |
 | Test runner | Vitest (not `bun test`) |
+| Type checking | TypeScript 7 with Bun's `@types/bun` (not `@types/node`) |
 | Browser checks | `Bun.WebView` |
 | Diagrams | mermaid |
 
 `bun build` and `bun test` are deliberately unused — VitePress owns the build
 pipeline and Vitest runs on the same Vite pipeline, so tests and the shipped
 bundle share resolution and transform behaviour.
+
+`tsconfig.json` follows [Bun's TypeScript guide](https://bun.com/docs/typescript),
+with two project-specific entries: `DOM` in `lib`, because the theme code runs in
+a browser, and `node` in `types` next to `bun`, because TypeScript 6 and later
+stop discovering `@types/*` automatically and the vitest suites import `node:fs`
+and `node:path`.
 
 See `development/docs-toolchain.md` for detail.
 

@@ -1,0 +1,30 @@
+{
+  // Follows Bun's TypeScript guide: Bun allows top-level await, `.ts` import
+  // extensions and JSX, none of which TypeScript permits by default.
+  //
+  // Two deviations from that guide, both deliberate:
+  //   - `DOM` is in `lib` because the theme code runs in the browser, not in Bun.
+  //   - `node` is listed in `types` as well as `bun`: TypeScript 6 and later stop
+  //     discovering `@types/*` automatically, and the vitest suites import
+  //     `node:fs` and `node:path` (their definitions arrive with bun-types' own
+  //     dependency on `@types/node`).
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "allowJs": true,
+    "types": ["bun", "node"],
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  // Built output and Vite's cache are not source; type checking them is wasted
+  // time. `node_modules` is excluded by default.
+  "exclude": [".vitepress/dist", ".vitepress/cache", "node_modules"]
+}

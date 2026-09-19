@@ -1,4 +1,7 @@
-import type MarkdownIt from 'markdown-it'
+// markdown-it's default export is a value (a callable wrapper around the class),
+// so the instance type and the render-rule signature come from its named type
+// exports instead.
+import type { MarkdownIt, RendererRule } from 'markdown-it'
 
 export interface MermaidPluginOptions {
   /** Fence language that selects the mermaid renderer. */
@@ -14,7 +17,7 @@ export interface MermaidPluginOptions {
  */
 export function mermaid(md: MarkdownIt, options: MermaidPluginOptions = {}): void {
   const language = (options.language ?? 'mermaid').toLowerCase()
-  const fallback =
+  const fallback: RendererRule =
     md.renderer.rules.fence ??
     ((tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts))
 

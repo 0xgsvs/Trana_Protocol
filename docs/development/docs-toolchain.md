@@ -47,6 +47,8 @@ stack competes with them.
 | `@oxc-project/types` | — | oxc types, via Rolldown |
 | `oxlint` | 1.83.0 | Linter |
 | `vitest` | 5.0.1 | Test runner |
+| `typescript` | 7.0.2 | Type checking (`tsc --noEmit`) |
+| `@types/bun` | 1.4.2 | Bun's type definitions; its own dependency on `@types/node` supplies the `node:fs`/`node:path` types the vitest suites import |
 | `mermaid` | 12.0.0 | Diagram rendering |
 | `vue` | 3.5.43 | VitePress peer |
 
@@ -72,10 +74,11 @@ bun run build       # production build -> .vitepress/dist
 bun run preview     # serve the built output
 bun run test        # vitest run
 bun run test:watch  # vitest in watch mode
-bun run test:render # browser check: diagrams are drawn, zoom controls work
+bun run test:render # browser check: diagrams drawn whole, viewer opens and closes
+bun run typecheck   # tsc --noEmit over the site, theme, tests and scripts
 bun run lint        # oxlint --deny-warnings
 bun run lint:fix    # oxlint --fix
-bun run check       # lint, then test, then build
+bun run check       # lint, then typecheck, then test, then build
 ```
 
 `bun run check` is the gate for the site itself. `bun run test:render` is separate
