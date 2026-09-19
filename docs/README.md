@@ -154,3 +154,13 @@ Two things in `.vitepress/theme/index.ts` are not obvious and should not be
 
 `bun run test:render` is the guard for the first two, and it drives the viewer
 for the fourth.
+
+## See also
+
+- [`../README.md`](../README.md) — the repository as a whole: layout and quick start
+- [`../trana/README.md`](../trana/README.md) — the program this site documents
+- [`development/docs-toolchain.md`](development/docs-toolchain.md) — this directory
+  in more depth: the markdown pipeline, the diagram viewer, and every check
+
+`srcExclude` in `.vitepress/config.mts` is `**/README.md`, which is why this file
+is not a page on the built site.
