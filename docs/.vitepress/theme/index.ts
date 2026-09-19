@@ -3,6 +3,7 @@ import DefaultTheme from 'vitepress/theme'
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vitepress'
 import { mermaidThemeVariables } from './mermaid'
+import { enhanceDiagram } from './diagram-zoom'
 import { palette } from './palette'
 import './custom.css'
 
@@ -62,7 +63,6 @@ const theme: Theme = {
       const nodes = pending()
       if (nodes.length === 0) return
 
-      const mermaid = await loadMermaid()
       for (const el of nodes) {
         // Read through attributes, not `dataset`: a hyphenated `data-*` name is
         // not a legal `dataset` property key and throws on assignment.
@@ -72,19 +72,36 @@ const theme: Theme = {
       }
 
       try {
+        const mermaid = await loadMermaid()
         await mermaid.run({ nodes })
       } catch (error) {
         console.error('[docs] mermaid render failed', error)
         for (const el of nodes) failed.add(el)
+        return
+      }
+
+      // The zoom stage is an enhancement, not part of rendering: a failure here
+      // must not mark the diagram as broken, or the next pass would leave a
+      // perfectly good diagram showing as raw text.
+      for (const el of nodes) {
+        try {
+          enhanceDiagram(el)
+        } catch (error) {
+          console.error('[docs] diagram zoom unavailable', error)
+        }
       }
     }
 
     /** Coalesce bursts of DOM changes into one render pass. */
+    let inFlight: Promise<unknown> = Promise.resolve()
     const schedule = (): void => {
       if (scheduled !== undefined) return
       scheduled = setTimeout(() => {
         scheduled = undefined
-        void render()
+        // Mermaid draws diagrams one at a time, so an overlapping pass would
+        // collect the blocks the running pass has not reached yet and render
+        // them twice. Chaining passes means each starts from a settled DOM.
+        inFlight = inFlight.then(render, render)
       }, 0)
     }
 
@@ -92,6 +109,13 @@ const theme: Theme = {
     const rerender = (): void => {
       for (const el of document.querySelectorAll<HTMLElement>(`[${SOURCE_ATTR}]`)) {
         el.textContent = el.getAttribute(SOURCE_ATTR) ?? ''
+        // The expand affordance lives inside the element, so wiping the content
+        // takes it with it; clear everything that says it was built.
+        delete el.dataset.viewer
+        el.removeAttribute('role')
+        el.removeAttribute('tabindex')
+        el.removeAttribute('aria-label')
+        el.removeAttribute('title')
         failed.delete(el)
       }
       schedule()

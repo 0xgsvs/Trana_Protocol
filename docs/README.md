@@ -18,7 +18,7 @@ bun run dev         # dev server with HMR at http://localhost:5173
 bun run build       # production build -> .vitepress/dist
 bun run preview     # serve the built output
 bun run test        # vitest: sidebar integrity, diagram validity, source drift
-bun run test:render # browser check: every diagram renders to an <svg>
+bun run test:render # browser check: diagrams drawn whole, viewer opens and closes
 bun run lint        # oxlint
 bun run check       # lint + test + build
 ```
@@ -65,8 +65,9 @@ See `development/docs-toolchain.md` for detail.
   theme/palette.ts        # gruvbox material dark hard (source of truth)
   theme/shiki.ts          # code-block theme built from the palette
   theme/mermaid.ts        # diagram colours built from the palette
+  theme/diagram-zoom.ts   # fullscreen viewer for diagrams too big for the column
   theme/custom.css        # VitePress variables pinned to the palette
-scripts/check-render.mjs  # browser assertion that diagrams render
+scripts/check-render.mjs  # browser assertion that diagrams render whole and open a viewer
 tests/                    # vitest suites
 tests/helpers.ts          # shared page discovery
 introduction/ protocol/ workflows/ security/ reference/ development/ appendix/
@@ -134,11 +135,22 @@ Two things in `.vitepress/theme/index.ts` are not obvious and should not be
 1. Rendering is triggered by a `MutationObserver`. VitePress mounts content
    after theme setup and replaces it on client-side navigation, so rendering
    from `onMounted` alone sees an empty element.
-2. "Already rendered" means the block contains an `<svg>`. Mermaid sets
-   `data-processed` *before* it renders, so trusting that attribute strands a
-   failed diagram as raw text permanently.
+2. "Already rendered" means the block contains an `<svg>`, which is enough to
+   decide *whether to render*. It is not enough to decide whether the diagram is
+   *visible*: mermaid appends the svg first and fills it in a moment later, one
+   diagram at a time, so anything checking the page has to wait for a `viewBox`
+   and content inside it. Mermaid's `data-processed` attribute is worse — it is
+   set *before* rendering, so trusting it strands a failed diagram as raw text.
 3. Flowcharts pin `layout: 'dagre'`. Mermaid's default (ELK) is a separate
    1.4 MB lazily-fetched engine; see `development/docs-toolchain.md`. Switching
    back changes diagram appearance, so re-check visually.
+4. Diagrams mermaid draws wider than the content column stay *whole* on the page
+   — scaled to the column, however small that makes them — and become clickable
+   instead. Clicking one opens a fullscreen `<dialog>` viewer at natural size
+   (`theme/diagram-zoom.ts`), fitted to the whole diagram, where the reader can
+   drag to pan and zoom to read. Hiding part of a diagram behind a fixed-height
+   box on the page is the thing to avoid: the reader loses the overview they
+   came for.
 
-`bun run test:render` is the guard for the first two.
+`bun run test:render` is the guard for the first two, and it drives the viewer
+for the fourth.

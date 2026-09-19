@@ -72,7 +72,7 @@ bun run build       # production build -> .vitepress/dist
 bun run preview     # serve the built output
 bun run test        # vitest run
 bun run test:watch  # vitest in watch mode
-bun run test:render # browser check: every diagram renders to an <svg>
+bun run test:render # browser check: diagrams are drawn, zoom controls work
 bun run lint        # oxlint --deny-warnings
 bun run lint:fix    # oxlint --fix
 bun run check       # lint, then test, then build
@@ -107,9 +107,10 @@ docs/
 │       ├── palette.ts      # gruvbox material dark hard palette (source of truth)
 │       ├── shiki.ts        # code-block theme built from that palette
 │       ├── mermaid.ts      # diagram themeVariables built from that palette
+│       ├── diagram-zoom.ts # fullscreen viewer for diagrams too big for the column
 │       └── custom.css      # VitePress variables, pinned to that palette
 ├── scripts/
-│   └── check-render.mjs    # browser check: every diagram becomes an <svg>
+│   └── check-render.mjs    # browser check: diagrams are drawn and zoom controls work
 ├── tests/                  # vitest: docs invariants, diagram validity, source drift
 ├── index.md                # landing page
 ├── introduction/           # what the protocol is, who acts, what exists
@@ -161,6 +162,52 @@ there is no dependency tracking an older VitePress major.
 
 To change the fence language, edit the plugin's `language` option and the
 default in `config.mts`.
+
+### Diagrams too big for the column get a fullscreen viewer
+
+Mermaid lays a diagram out at its natural size and `pre.mermaid svg {
+max-width: 100% }` then squeezes it into the content column. The end-to-end
+sequence diagram is 1727 px wide and lands at 40%, which is where its labels
+stop being readable — but the diagram is still *all* there, and that part
+matters. An earlier version of this wrapped oversized diagrams in a
+fixed-height box with the pan and zoom inline, which traded "small but
+complete" for "readable but half-hidden": the reader could no longer see the
+whole diagram without dragging inside a 520 px window. That is not what docs
+sites do, and it was wrong.
+
+So the page rendering is left alone, and a diagram becomes clickable when
+mermaid drew it wider than the column or taller than 900 px — decided per
+diagram from the drawn `viewBox` rather than from a list of exceptions. On the
+current pages 9 of the 13 qualify. The gantt and the two state diagrams already
+fit and are not made clickable, because a viewer could not show them any larger
+than the page does. On a narrow screen the column shrinks, so more diagrams
+qualify — which is the point, since a phone column cannot hold any of them.
+
+The viewer is a native `<dialog>`, which brings the modal behaviour with it:
+
+- **It fills the viewport**, and it is written to do so explicitly. A modal
+  dialog is centred only by the user-agent's `margin: auto`, and this page's CSS
+  reset removes it — a fixed box with a definite size and no auto margin is not
+  centred, it sits in the top-left corner. Filling the viewport sidesteps
+  centring altogether and gives the drawing the whole screen.
+- **It opens fitted to the whole diagram**, so nothing is hidden the moment it
+  appears. `Fit` returns to that state, and zooming out floors there.
+- **Drag to pan**, with pointer capture so a drag that leaves the viewer keeps
+  working, and `−` / `Fit` / `+` with a percentage readout where 100% is
+  natural size.
+- **Keyboard**: `+`, `-`, `0` and the arrow keys on a focusable stage. The
+  diagram itself is reachable by `Tab` and opens with Enter or Space.
+- **The wheel zooms unconditionally here**, unlike on the page: there is no page
+  scroll to protect inside a modal. Ctrl is still left to the browser, which is
+  how a trackpad pinch arrives.
+- **Escape and the ✕ close it**, and focus returns to the diagram on the page.
+
+Two implementation details are load-bearing. The svg is *moved* into the dialog
+rather than cloned, because mermaid scopes its stylesheet to the svg's own `id`
+— a clone would duplicate that id and need every selector rewritten. And closing
+restores the svg's original `style` attribute, which is what keeps the inline
+diagram sized to the column instead of staying at the natural size the viewer
+set.
 
 ## Diagram layout and build output
 
@@ -239,6 +286,13 @@ content, broken diagrams, unreachable pages — rather than rendering details:
   (the two repeat the same literals, and CSS cannot import TypeScript) and
   checks the palette's contrast ratios against WCAG minimums: body text at AAA,
   muted text at AA, accents and the brand button at their minimums.
+- **Diagram viewer** — `tests/diagram-zoom.test.ts` covers the arithmetic behind
+  the fullscreen viewer: when a diagram counts as too wide or too tall for its
+  column, and the scale it opens at. That the scale is "the whole diagram fits"
+  is asserted as a property rather than as a number, since a viewer that cropped
+  the diagram would defeat its own purpose. Whether a *particular* page diagram
+  qualifies depends on the size mermaid draws it at, which only a browser knows,
+  so `bun run test:render` asserts that end.
 - **Component map** — `tests/component-map.test.ts` re-derives, from each
   instruction's `#[derive(Accounts)]` struct, which program-owned accounts it
   mutates or creates, and requires the Component map on `/protocol/architecture`
@@ -251,9 +305,17 @@ And one check that cannot be a unit test, because the failure it catches is
 invisible to both parsing and markup assertions:
 
 - **`bun run test:render`** loads every page in a real browser and asserts each
-  `pre.mermaid` block became an `<svg>`. A diagram can be syntactically valid,
-  correctly transformed in the server output, and still sit on the page as raw
-  text — that is a client-side rendering bug, and only a browser sees it.
+  `pre.mermaid` block was *drawn*: an `<svg>` with a `viewBox` and content
+  inside, and no taller than the block containing it — a diagram with a hidden
+  half is the failure that matters to a reader, and no unit test can see it. It
+  then drives the viewer on the first diagram that has one: opens fitted to the
+  whole diagram, `+` enlarges it, and closing returns the diagram to the page
+  with its inline sizing and its focus. The drawn check is not pedantry: mermaid
+  appends the `<svg>` element and fills it in a moment later, one diagram at a
+  time, so an svg-presence check passes on a blank diagram. A diagram can be
+  syntactically valid, correctly transformed in the server output, and still sit
+  on the page as raw text or an empty frame — that is a client-side rendering
+  bug, and only a browser sees it.
 
 That last one is the reason this directory has tests at all: the documentation
 describes a program that will keep changing, and the divergence — or a silently
