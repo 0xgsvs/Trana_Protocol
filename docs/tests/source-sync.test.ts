@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { group } from './helpers'
 
 /**
  * Guards against documentation drift: every fact this site states about the
@@ -28,11 +29,11 @@ interface Struct {
 function parseStructs(source: string): Struct[] {
   const structs: Struct[] = []
   for (const match of source.matchAll(/pub struct (\w+)\s*\{([^}]*)\}/g)) {
-    const fields = [...match[2].matchAll(/pub\s+(\w+)\s*:\s*([^,]+),/g)].map((field) => ({
-      name: field[1],
-      type: field[2].trim(),
+    const fields = [...group(match, 2).matchAll(/pub\s+(\w+)\s*:\s*([^,]+),/g)].map((field) => ({
+      name: group(field, 1),
+      type: group(field, 2).trim(),
     }))
-    structs.push({ name: match[1], fields })
+    structs.push({ name: group(match, 1), fields })
   }
   return structs
 }
@@ -71,9 +72,10 @@ function initSpaceOf(struct: Struct): number {
 
 /** The `## ...` section of a markdown doc whose heading names `heading`. */
 function sectionFor(doc: string, heading: string): string {
-  const section = doc
-    .split(/^## /m)
-    .find((part) => part.split('\n')[0].includes(heading))
+  const section = doc.split(/^## /m).find((part) => {
+    const [headingLine] = part.split('\n')
+    return headingLine?.includes(heading) ?? false
+  })
   if (section === undefined) {
     throw new Error(`no '## ' section naming ${heading}`)
   }

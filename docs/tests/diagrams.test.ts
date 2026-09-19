@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import mermaid from 'mermaid'
 import { describe, expect, it } from 'vitest'
-import { DOCS, sitePages } from './helpers'
+import { DOCS, group, sitePages } from './helpers'
 
 interface Diagram {
   file: string
@@ -17,7 +17,7 @@ function diagramsIn(page: string): Diagram[] {
   const found: Diagram[] = []
   const pattern = /^```mermaid[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm
   for (const match of text.matchAll(pattern)) {
-    found.push({ file: page, fence: found.length + 1, source: match[1].trim() })
+    found.push({ file: page, fence: found.length + 1, source: group(match, 1).trim() })
   }
   return found
 }

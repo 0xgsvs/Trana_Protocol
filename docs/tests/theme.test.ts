@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DOCS } from './helpers'
+import { DOCS, group } from './helpers'
 import { palette, type GruvboxPalette } from '../.vitepress/theme/palette'
 
 /**
@@ -20,8 +20,8 @@ function parseVars(): Map<string, string> {
   const out = new Map<string, string>()
   const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '')
   for (const block of stripped.matchAll(/:root[^{]*\{([^}]*)\}/g)) {
-    for (const declaration of block[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-      out.set(declaration[1], declaration[2].trim())
+    for (const declaration of group(block, 1).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+      out.set(group(declaration, 1), group(declaration, 2).trim())
     }
   }
   return out
@@ -33,7 +33,8 @@ const vars = parseVars()
 function resolve(name: string): string {
   let value = vars.get(name) ?? ''
   for (let hop = 0; hop < 8 && value.startsWith('var('); hop++) {
-    const reference = value.slice(4, -1).split(',')[0].trim()
+    const [first = ''] = value.slice(4, -1).split(',')
+    const reference = first.trim()
     value = vars.get(reference) ?? reference
   }
   return value

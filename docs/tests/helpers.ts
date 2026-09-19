@@ -19,10 +19,28 @@ function globToRegExp(glob: string): RegExp {
  * than hard-coded, so a page excluded from the build is not reported as an
  * unreachable page.
  */
+/**
+ * The nth capture group of a match that is known to have one.
+ *
+ * `match[n]` is `string | undefined` under `noUncheckedIndexedAccess`, and the
+ * compiler cannot know a group participated. Every caller matches a pattern whose
+ * group is mandatory, so a group that is missing means the pattern and the
+ * document have drifted apart — which should fail loudly, not default away.
+ */
+export function group(match: RegExpMatchArray, index: number): string {
+  const value = match[index]
+  if (value === undefined) {
+    throw new Error(`capture group ${index} missing from ${JSON.stringify(match[0])}`)
+  }
+  return value
+}
+
 export const srcExclude: RegExp[] = (() => {
   const block = /srcExclude:\s*\[([^\]]*)\]/.exec(config)
-  if (!block) return []
-  return [...block[1].matchAll(/'([^']+)'/g)].map((match) => globToRegExp(match[1]))
+  if (block === null) return []
+  const listed = block[1]
+  if (listed === undefined) return []
+  return [...listed.matchAll(/'([^']+)'/g)].map((match) => globToRegExp(group(match, 1)))
 })()
 
 function walk(dir: string, acc: string[] = []): string[] {
@@ -48,14 +66,14 @@ export function sitePages(): string[] {
 
 /** Every nav + sidebar link target, as written in the config. */
 export function linkedPages(): string[] {
-  return [...config.matchAll(/link:\s*'([^']+)'/g)].map((match) => match[1])
+  return [...config.matchAll(/link:\s*'([^']+)'/g)].map((match) => group(match, 1))
 }
 
 /** Sidebar-only link targets, as written in the config. */
 export function sidebarPages(): string[] {
   const start = config.indexOf('sidebar: [')
   const block = config.slice(start, config.indexOf('search: {', start))
-  return [...block.matchAll(/link:\s*'([^']+)'/g)].map((match) => match[1])
+  return [...block.matchAll(/link:\s*'([^']+)'/g)].map((match) => group(match, 1))
 }
 
 /** `/protocol/architecture` -> `protocol/architecture.md` */

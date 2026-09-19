@@ -22,7 +22,9 @@ export function mermaid(md: MarkdownIt, options: MermaidPluginOptions = {}): voi
     ((tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts))
 
   md.renderer.rules.fence = (tokens, idx, opts, env, self) => {
+    // markdown-it only calls a render rule for an index inside `tokens`.
     const token = tokens[idx]
+    if (token === undefined) return ''
     // Only the first info word selects the language; trailing metadata (as in
     // ```mermaid title="x") must not disable diagram rendering.
     const info = token.info.trim().split(/\s+/)[0]?.toLowerCase() ?? ''

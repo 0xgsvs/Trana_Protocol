@@ -56,10 +56,14 @@ pipeline and Vitest runs on the same Vite pipeline, so tests and the shipped
 bundle share resolution and transform behaviour.
 
 `tsconfig.json` follows [Bun's TypeScript guide](https://bun.com/docs/typescript),
-with two project-specific entries: `DOM` in `lib`, because the theme code runs in
-a browser, and `node` in `types` next to `bun`, because TypeScript 6 and later
-stop discovering `@types/*` automatically and the vitest suites import `node:fs`
-and `node:path`.
+including its strict flags. Three entries are project-specific and worth knowing:
+
+- `DOM` is in `lib`, because the theme code runs in a browser, not in Bun.
+- `types` lists `node` next to `bun`: TypeScript 6 and later stop discovering
+  `@types/*` automatically, and the vitest suites import `node:fs`/`node:path`.
+- `include` names `.vitepress` explicitly. The default include pattern does not
+  descend into dot-directories, so without that entry the theme, the site config
+  and `shiki.ts` are silently never typechecked while `tsc` still exits 0.
 
 See `development/docs-toolchain.md` for detail.
 

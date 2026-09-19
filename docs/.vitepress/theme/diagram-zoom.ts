@@ -49,7 +49,14 @@ export function naturalSize(svg: {
   const parts = viewBox.trim().split(/[\s,]+/).map(Number)
   const width = parts[2]
   const height = parts[3]
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+  if (
+    width === undefined ||
+    height === undefined ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
     return undefined
   }
   return { width, height }

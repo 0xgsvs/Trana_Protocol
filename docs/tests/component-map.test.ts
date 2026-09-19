@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { group } from './helpers'
 
 /**
  * Guards the Component map on /protocol/architecture against the program.
@@ -75,7 +76,7 @@ function parseAccounts(source: string, structName: string): Account[] {
     }
     const field = /^pub\s+(\w+)\s*:\s*(.+),$/.exec(trimmed)
     if (field) {
-      accounts.push({ name: field[1], type: field[2], attribute: attribute.join(' ') })
+      accounts.push({ name: group(field, 1), type: group(field, 2), attribute: attribute.join(' ') })
       attribute = []
     }
   }
@@ -86,8 +87,8 @@ function parseAccounts(source: string, structName: string): Account[] {
 const lib = readSrc('lib.rs')
 const instructionStructs = new Map(
   [...lib.matchAll(/pub fn (\w+)\(\s*ctx:\s*Context<(\w+)>/g)].map((match) => [
-    match[1],
-    match[2],
+    group(match, 1),
+    group(match, 2),
   ]),
 )
 
@@ -113,8 +114,8 @@ function diagramEdges(): Array<{ label: string; target: string }> {
   if (fence === undefined) throw new Error('no mermaid fence on the architecture page')
 
   return [...fence.matchAll(/^\s*(\w+)\s*-->\|([^|]+)\|\s*(\w+)\s*$/gm)].map((match) => ({
-    label: match[2].trim(),
-    target: match[3],
+    label: group(match, 2).trim(),
+    target: group(match, 3),
   }))
 }
 
