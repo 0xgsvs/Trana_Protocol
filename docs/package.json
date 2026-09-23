@@ -1,12 +1,12 @@
 {
-  "name": "trana-docs",
+  "name": "protocol-docs",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Documentation site for the Trana Protocol Anchor program",
+  "description": "Documentation site for the reinsurance and freight-delay Anchor programs",
   "packageManager": "bun@1.4.2",
   "scripts": {
-    "dev": "vitepress dev",
+    "dev": "vitepress dev --host",
     "build": "vitepress build",
     "preview": "vitepress preview",
     "test": "vitest run",

@@ -1,10 +1,16 @@
-# Trana Protocol — Documentation
+# Parametric Risk Protocols — Documentation
 
-VitePress site documenting the Anchor program in `../trana/programs/trana`.
+VitePress site documenting two Anchor programs: the drought-reinsurance program
+in `../reinsurance/programs/reinsurance` and the freight-delay program in
+`../freight_delay/programs/freight_delay`.
 
-Everything here describes the program as implemented in `src/`, not as described
-in `../LOI_DELIVERABLE_TRANA.md`. Where those disagree, the divergences are
-listed explicitly under `appendix/`.
+The site is split into two symmetric top-level sections — `/reinsurance/` and
+`/freight_delay/` — chosen from the navbar; the left sidebar swaps to the selected
+protocol's tree. `index.md` is a shared landing page that links into both.
+
+Everything here describes each program as implemented in its `src/`, not as
+described in the matching `LOI_DELIVERABLE_*.md`. Where those disagree, the
+divergences are listed explicitly under each section's `appendix/`.
 
 ## Requirements
 
@@ -82,8 +88,15 @@ See `development/docs-toolchain.md` for detail.
 scripts/check-render.mjs  # browser assertion that diagrams render whole and open a viewer
 tests/                    # vitest suites
 tests/helpers.ts          # shared page discovery
-introduction/ protocol/ workflows/ security/ reference/ development/ appendix/
+reinsurance/              # Reinsurance section: introduction/ protocol/ workflows/
+                          #   security/ reference/ development/ appendix/
+freight_delay/            # Freight Delay section: introduction/ protocol/ workflows/
+                          #   reference/ appendix/
 ```
+
+Each protocol section is a directory tree; pages move under it, and the sidebar
+in `config.mts` is keyed by the `/reinsurance/` and `/freight_delay/` path prefixes so one
+protocol's tree is shown at a time.
 
 ## Theming
 
@@ -170,7 +183,8 @@ for the fourth.
 ## See also
 
 - [`../README.md`](../README.md) — the repository as a whole: layout and quick start
-- [`../trana/README.md`](../trana/README.md) — the program this site documents
+- [`../reinsurance/README.md`](../reinsurance/README.md) and
+  [`../freight_delay/README.md`](../freight_delay/README.md) — the programs this site documents
 - [`development/docs-toolchain.md`](development/docs-toolchain.md) — this directory
   in more depth: the markdown pipeline, the diagram viewer, and every check
 

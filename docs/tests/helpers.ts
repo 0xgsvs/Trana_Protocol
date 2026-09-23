@@ -69,9 +69,17 @@ export function linkedPages(): string[] {
   return [...config.matchAll(/link:\s*'([^']+)'/g)].map((match) => group(match, 1))
 }
 
-/** Sidebar-only link targets, as written in the config. */
+/**
+ * Sidebar-only link targets, as written in the config.
+ *
+ * The sidebar is an object keyed by path prefix (`{ '/reinsurance/': [...], ... }`),
+ * so this slices from the `sidebar:` line to the following `search:` line rather
+ * than matching a specific bracket shape. Both protocols' groups are inside that
+ * slice, which is what the duplicate-link guard wants: a page listed twice — in
+ * one protocol's tree or across both — is a bug either way.
+ */
 export function sidebarPages(): string[] {
-  const start = config.indexOf('sidebar: [')
+  const start = config.indexOf('sidebar:')
   const block = config.slice(start, config.indexOf('search: {', start))
   return [...block.matchAll(/link:\s*'([^']+)'/g)].map((match) => group(match, 1))
 }

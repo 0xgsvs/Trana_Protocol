@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { group } from './helpers'
 
 /**
- * Guards the Component map on /protocol/architecture against the program.
+ * Guards each protocol's Component map against its program.
  *
  * The map is the one piece of documentation whose claims are structural rather
  * than textual, so nothing else covers it: `diagrams.test.ts` only checks that a
@@ -17,21 +17,68 @@ import { group } from './helpers'
  * instruction, each program-owned account it mutates or creates must appear as a
  * solid edge in the diagram, and the diagram may not claim an edge the structs
  * do not support.
+ *
+ * The site documents two protocols, so the suite runs once per protocol. Only
+ * the report account and the instruction names differ between them.
  */
 
 const DOCS = resolve(import.meta.dirname, '..')
-const SRC = resolve(DOCS, '../trana/programs/trana/src')
 
-const readSrc = (file: string): string => readFileSync(join(SRC, file), 'utf8')
-const readDoc = (file: string): string => readFileSync(join(DOCS, file), 'utf8')
-
-/** Rust account type -> node id in the diagram. */
-const STATE_NODES: Record<string, string> = {
-  PoolConfig: 'Config',
-  LpPosition: 'LpPos',
-  Policy: 'Policy',
-  MetricReport: 'Report',
+interface Protocol {
+  name: string
+  /** Docs section directory under `docs/`. */
+  docs: string
+  /** Program source directory, relative to `docs/`. */
+  src: string
+  /** Rust account type -> node id in the diagram. */
+  nodes: Record<string, string>
+  /** The six instruction names. */
+  instructions: string[]
+  /** The one handler that reads config without writing it. */
+  readOnly: string
+  /** Total program-owned state accounts written across every handler. */
+  totalWrites: number
 }
+
+const PROTOCOLS: Protocol[] = [
+  {
+    name: 'reinsurance',
+    docs: 'reinsurance',
+    src: '../reinsurance/programs/reinsurance/src',
+    nodes: { PoolConfig: 'Config', LpPosition: 'LpPos', Policy: 'Policy', MetricReport: 'Report' },
+    instructions: [
+      'buy_policy',
+      'deposit_capital',
+      'initialize_pool',
+      'report_metric',
+      'settle_policy',
+      'withdraw_capital',
+    ],
+    readOnly: 'report_metric',
+    totalWrites: 10,
+  },
+  {
+    name: 'freight_delay',
+    docs: 'freight_delay',
+    src: '../freight_delay/programs/freight_delay/src',
+    nodes: {
+      PoolConfig: 'Config',
+      LpPosition: 'LpPos',
+      Policy: 'Policy',
+      DeliveryReport: 'Report',
+    },
+    instructions: [
+      'buy_policy',
+      'deposit_capital',
+      'initialize_pool',
+      'report_delivery_milestone',
+      'settle_policy',
+      'withdraw_capital',
+    ],
+    readOnly: 'report_delivery_milestone',
+    totalWrites: 10,
+  },
+]
 
 /** Constraints that make a handler write the account it is attached to. */
 const WRITE_FLAGS = /(^|[^\w:])(mut|init|init_if_needed)\b/
@@ -83,59 +130,61 @@ function parseAccounts(source: string, structName: string): Account[] {
   return accounts
 }
 
-/** lib.rs is the only place the instruction -> account-struct mapping exists. */
-const lib = readSrc('lib.rs')
-const instructionStructs = new Map(
-  [...lib.matchAll(/pub fn (\w+)\(\s*ctx:\s*Context<(\w+)>/g)].map((match) => [
-    group(match, 1),
-    group(match, 2),
-  ]),
-)
+describe.each(PROTOCOLS)('$name component map matches the account structs', (protocol) => {
+  const SRC = resolve(DOCS, protocol.src)
+  const readSrc = (file: string): string => readFileSync(join(SRC, file), 'utf8')
+  const readDoc = (file: string): string =>
+    readFileSync(join(DOCS, protocol.docs, file), 'utf8')
 
-/** Instruction -> program-owned state accounts it writes or creates. */
-function writesByInstruction(): Map<string, Set<string>> {
-  const writes = new Map<string, Set<string>>()
+  const STATE_NODES = protocol.nodes
 
-  for (const [instruction, structName] of instructionStructs) {
-    const source = readSrc(`instructions/${instruction}.rs`)
-    const targets = new Set<string>()
-    for (const account of parseAccounts(source, structName)) {
-      const node = STATE_NODES[accountType(account.type)]
-      if (node !== undefined && WRITE_FLAGS.test(account.attribute)) targets.add(node)
+  /** lib.rs is the only place the instruction -> account-struct mapping exists. */
+  const lib = readSrc('lib.rs')
+  const instructionStructs = new Map(
+    [...lib.matchAll(/pub fn (\w+)\(\s*ctx:\s*Context<(\w+)>/g)].map((match) => [
+      group(match, 1),
+      group(match, 2),
+    ]),
+  )
+
+  /** Instruction -> program-owned state accounts it writes or creates. */
+  function writesByInstruction(): Map<string, Set<string>> {
+    const writes = new Map<string, Set<string>>()
+
+    for (const [instruction, structName] of instructionStructs) {
+      const source = readSrc(`instructions/${instruction}.rs`)
+      const targets = new Set<string>()
+      for (const account of parseAccounts(source, structName)) {
+        const node = STATE_NODES[accountType(account.type)]
+        if (node !== undefined && WRITE_FLAGS.test(account.attribute)) targets.add(node)
+      }
+      writes.set(instruction, targets)
     }
-    writes.set(instruction, targets)
+    return writes
   }
-  return writes
-}
 
-/** Solid `-->|instruction| Node` edges in the Component map. */
-function diagramEdges(): Array<{ label: string; target: string }> {
-  const fence = /```mermaid\n([\s\S]*?)```/.exec(readDoc('protocol/architecture.md'))?.[1]
-  if (fence === undefined) throw new Error('no mermaid fence on the architecture page')
+  /** Solid `-->|instruction| Node` edges in the Component map. */
+  function diagramEdges(): Array<{ label: string; target: string }> {
+    const fence = /```mermaid\n([\s\S]*?)```/.exec(
+      readDoc('protocol/architecture.md'),
+    )?.[1]
+    if (fence === undefined) throw new Error('no mermaid fence on the architecture page')
 
-  return [...fence.matchAll(/^\s*(\w+)\s*-->\|([^|]+)\|\s*(\w+)\s*$/gm)].map((match) => ({
-    label: group(match, 2).trim(),
-    target: group(match, 3),
-  }))
-}
+    return [...fence.matchAll(/^\s*(\w+)\s*-->\|([^|]+)\|\s*(\w+)\s*$/gm)].map((match) => ({
+      label: group(match, 2).trim(),
+      target: group(match, 3),
+    }))
+  }
 
-const writes = writesByInstruction()
-const edges = diagramEdges()
-const nodeIds = new Set(Object.values(STATE_NODES))
+  const writes = writesByInstruction()
+  const edges = diagramEdges()
+  const nodeIds = new Set(Object.values(STATE_NODES))
 
-describe('component map matches the account structs', () => {
   it('found every instruction and its state accounts', () => {
-    expect([...instructionStructs.keys()].sort()).toEqual([
-      'buy_policy',
-      'deposit_capital',
-      'initialize_pool',
-      'report_metric',
-      'settle_policy',
-      'withdraw_capital',
-    ])
+    expect([...instructionStructs.keys()].sort()).toEqual([...protocol.instructions].sort())
     // A floor, so a parser that silently extracts nothing cannot pass trivially.
     const total = [...writes.values()].reduce((sum, set) => sum + set.size, 0)
-    expect(total).toBe(10)
+    expect(total).toBe(protocol.totalWrites)
   })
 
   it('draws an edge for every handler that writes program state', () => {
@@ -169,13 +218,14 @@ describe('component map matches the account structs', () => {
     expect(unknown).toEqual([])
   })
 
-  it('keeps `report_metric` reading config rather than writing it', () => {
+  it('keeps the report handler reading config rather than writing it', () => {
     // The map's one read-only handler, and the edge that used to be wrong in
-    // the opposite direction: report_metric must not appear as a Config writer.
-    expect(writes.get('report_metric')).toEqual(new Set(['Report']))
-    expect(
-      edges.some((edge) => edge.label === 'report_metric' && edge.target === 'Config'),
-    ).toBe(false)
+    // the opposite direction: the report handler must not appear as a Config
+    // writer.
+    expect(writes.get(protocol.readOnly)).toEqual(new Set(['Report']))
+    expect(edges.some((edge) => edge.label === protocol.readOnly && edge.target === 'Config')).toBe(
+      false,
+    )
   })
 
   it('gives the two capital handlers the same state accounts', () => {

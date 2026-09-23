@@ -3,9 +3,9 @@ import { mermaid } from './plugins/mermaid.ts'
 import { gruvboxShiki } from './theme/shiki.ts'
 
 export default defineConfig({
-  title: 'Trana Protocol',
+  title: 'Parametric Risk Protocols',
   description:
-    'Parametric drought reinsurance on Solana — Anchor program architecture, instructions, and workflows.',
+    'Parametric risk protocols on Solana — district rainfall reinsurance and freight-delay indemnity. Anchor architecture, instructions, and workflows.',
   lang: 'en-US',
   cleanUrls: true,
   srcExclude: ['**/README.md'],
@@ -36,84 +36,117 @@ export default defineConfig({
   },
   themeConfig: {
     outline: { level: [2, 3] },
+    // One entry per protocol. The sidebar below is keyed by the same path
+    // prefixes, so selecting a protocol swaps the whole left-hand tree.
     nav: [
-      { text: 'Overview', link: '/introduction/overview' },
-      { text: 'Protocol', link: '/protocol/architecture' },
-      { text: 'Workflows', link: '/workflows/lifecycle' },
-      { text: 'Reference', link: '/reference/seeds' },
-      {
-        text: 'Development',
-        items: [
-          { text: 'Local Setup', link: '/development/local-setup' },
-          { text: 'Testing', link: '/development/testing' },
-          { text: 'Docs Toolchain', link: '/development/docs-toolchain' },
-        ],
-      },
+      { text: 'Reinsurance', link: '/reinsurance/introduction/overview' },
+      { text: 'Freight Delay', link: '/freight_delay/introduction/overview' },
     ],
-    sidebar: [
-      {
-        text: 'Introduction',
-        items: [
-          { text: 'Overview', link: '/introduction/overview' },
-          { text: 'Actors & Roles', link: '/introduction/actors' },
-          { text: 'Scope & Status', link: '/introduction/scope' },
-        ],
-      },
-      {
-        text: 'Protocol',
-        items: [
-          { text: 'Architecture', link: '/protocol/architecture' },
-          { text: 'Accounts & State', link: '/protocol/accounts' },
-          { text: 'Instructions', link: '/protocol/instructions' },
-          { text: 'Invariants', link: '/protocol/invariants' },
-          { text: 'Economics', link: '/protocol/economics' },
-        ],
-      },
-      {
-        text: 'Workflows',
-        items: [
-          { text: 'Pool Lifecycle', link: '/workflows/lifecycle' },
-          { text: 'LP Capital', link: '/workflows/lp-capital' },
-          { text: 'Policy Settlement', link: '/workflows/policy-settlement' },
-        ],
-      },
-      {
-        text: 'Security',
-        items: [
-          { text: 'Threat Model', link: '/security/threat-model' },
-          { text: 'Known Limitations', link: '/security/known-limitations' },
-        ],
-      },
-      {
-        text: 'Reference',
-        items: [
-          { text: 'PDA Seeds & Constants', link: '/reference/seeds' },
-          { text: 'Instructions & Accounts', link: '/reference/instructions' },
-          { text: 'Error Codes', link: '/reference/errors' },
-          { text: 'Events', link: '/reference/events' },
-        ],
-      },
-      {
-        text: 'Development',
-        items: [
-          { text: 'Local Setup', link: '/development/local-setup' },
-          { text: 'Testing', link: '/development/testing' },
-          { text: 'Docs Toolchain', link: '/development/docs-toolchain' },
-        ],
-      },
-      {
-        text: 'Appendix',
-        items: [{ text: 'LOI vs Code', link: '/appendix/loi-divergences' }],
-      },
-    ],
+    // Keyed by path prefix: VitePress picks the longest matching key, so every
+    // page under `/reinsurance/` gets the Reinsurance tree and every page under `/freight_delay/`
+    // gets the Freight Delay tree. The root landing page matches neither and shows no
+    // sidebar.
+    sidebar: {
+      '/reinsurance/': [
+        {
+          text: 'Introduction',
+          items: [
+            { text: 'Overview', link: '/reinsurance/introduction/overview' },
+            { text: 'Actors & Roles', link: '/reinsurance/introduction/actors' },
+            { text: 'Scope & Status', link: '/reinsurance/introduction/scope' },
+          ],
+        },
+        {
+          text: 'Protocol',
+          items: [
+            { text: 'Architecture', link: '/reinsurance/protocol/architecture' },
+            { text: 'Accounts & State', link: '/reinsurance/protocol/accounts' },
+            { text: 'Instructions', link: '/reinsurance/protocol/instructions' },
+            { text: 'Invariants', link: '/reinsurance/protocol/invariants' },
+            { text: 'Economics', link: '/reinsurance/protocol/economics' },
+          ],
+        },
+        {
+          text: 'Workflows',
+          items: [
+            { text: 'Pool Lifecycle', link: '/reinsurance/workflows/lifecycle' },
+            { text: 'LP Capital', link: '/reinsurance/workflows/lp-capital' },
+            { text: 'Policy Settlement', link: '/reinsurance/workflows/policy-settlement' },
+          ],
+        },
+        {
+          text: 'Security',
+          items: [
+            { text: 'Threat Model', link: '/reinsurance/security/threat-model' },
+            { text: 'Known Limitations', link: '/reinsurance/security/known-limitations' },
+          ],
+        },
+        {
+          text: 'Reference',
+          items: [
+            { text: 'PDA Seeds & Constants', link: '/reinsurance/reference/seeds' },
+            { text: 'Instructions & Accounts', link: '/reinsurance/reference/instructions' },
+            { text: 'Error Codes', link: '/reinsurance/reference/errors' },
+            { text: 'Events', link: '/reinsurance/reference/events' },
+          ],
+        },
+        {
+          text: 'Development',
+          items: [
+            { text: 'Local Setup', link: '/reinsurance/development/local-setup' },
+            { text: 'Testing', link: '/reinsurance/development/testing' },
+            { text: 'Docs Toolchain', link: '/reinsurance/development/docs-toolchain' },
+          ],
+        },
+        {
+          text: 'Appendix',
+          items: [{ text: 'LOI vs Code', link: '/reinsurance/appendix/loi-divergences' }],
+        },
+      ],
+      '/freight_delay/': [
+        {
+          text: 'Introduction',
+          items: [
+            { text: 'Overview', link: '/freight_delay/introduction/overview' },
+            { text: 'Scope & Status', link: '/freight_delay/introduction/scope' },
+          ],
+        },
+        {
+          text: 'Protocol',
+          items: [
+            { text: 'Architecture', link: '/freight_delay/protocol/architecture' },
+            { text: 'Accounts & State', link: '/freight_delay/protocol/accounts' },
+            { text: 'Instructions', link: '/freight_delay/protocol/instructions' },
+            { text: 'Invariants', link: '/freight_delay/protocol/invariants' },
+          ],
+        },
+        {
+          text: 'Workflows',
+          items: [{ text: 'Pool Lifecycle', link: '/freight_delay/workflows/lifecycle' }],
+        },
+        {
+          text: 'Reference',
+          items: [
+            { text: 'PDA Seeds & Constants', link: '/freight_delay/reference/seeds' },
+            { text: 'Instructions & Accounts', link: '/freight_delay/reference/instructions' },
+            { text: 'Error Codes', link: '/freight_delay/reference/errors' },
+            { text: 'Events', link: '/freight_delay/reference/events' },
+          ],
+        },
+        {
+          text: 'Appendix',
+          items: [{ text: 'LOI vs Code', link: '/freight_delay/appendix/loi-divergences' }],
+        },
+      ],
+    },
     search: { provider: 'local' },
     editLink: {
       pattern: 'https://github.com/:repo/edit/main/docs/:path',
       text: 'Edit this page',
     },
     footer: {
-      message: 'Documentation for the Trana Anchor program.',
-      copyright: 'Trana Protocol',
+      message: 'Documentation for the Reinsurance and Freight Delay Anchor programs.',
+      copyright: 'Parametric Risk Protocols',
     },
     docFooter: { prev: 'Previous', next: 'Next' },
     socialLinks: [],

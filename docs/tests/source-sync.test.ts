@@ -4,17 +4,45 @@ import { describe, expect, it } from 'vitest'
 import { group } from './helpers'
 
 /**
- * Guards against documentation drift: every fact this site states about the
- * program is re-derived from the Rust source and compared.
+ * Guards against documentation drift: every fact this site states about a
+ * program is re-derived from that program's Rust source and compared.
  *
- * When the program changes and the docs do not, these tests fail.
+ * The site documents two protocols, so the whole suite runs once per protocol.
+ * Each entry names the docs section and the crate it is checked against, plus
+ * the account structs the section is expected to document — the one fact that
+ * genuinely differs between the two programs' reference pages.
  */
 
 const DOCS = resolve(import.meta.dirname, '..')
-const SRC = resolve(DOCS, '../trana/programs/trana/src')
 
-const readSrc = (file: string): string => readFileSync(join(SRC, file), 'utf8')
-const readDoc = (file: string): string => readFileSync(join(DOCS, file), 'utf8')
+interface Protocol {
+  name: string
+  /** Docs section directory under `docs/`. */
+  docs: string
+  /** Program source directory, relative to `docs/`. */
+  src: string
+  /** Account struct names, in `state.rs` declaration order. */
+  accounts: string[]
+  /** The attested-observation handler: the one instruction name that differs. */
+  report: string
+}
+
+const PROTOCOLS: Protocol[] = [
+  {
+    name: 'reinsurance',
+    docs: 'reinsurance',
+    src: '../reinsurance/programs/reinsurance/src',
+    accounts: ['PoolConfig', 'LpPosition', 'Policy', 'MetricReport'],
+    report: 'report_metric',
+  },
+  {
+    name: 'freight_delay',
+    docs: 'freight_delay',
+    src: '../freight_delay/programs/freight_delay/src',
+    accounts: ['PoolConfig', 'LpPosition', 'Policy', 'DeliveryReport'],
+    report: 'report_delivery_milestone',
+  },
+]
 
 interface Field {
   name: string
@@ -82,176 +110,177 @@ function sectionFor(doc: string, heading: string): string {
   return section
 }
 
-const state = readSrc('state.rs')
-const errors = readSrc('error.rs')
-const constants = readSrc('constants.rs')
-const lib = readSrc('lib.rs')
-const events = readSrc('events.rs')
+describe.each(PROTOCOLS)('$name', (protocol) => {
+  const SRC = resolve(DOCS, protocol.src)
+  const readSrc = (file: string): string => readFileSync(join(SRC, file), 'utf8')
+  const readDoc = (file: string): string =>
+    readFileSync(join(DOCS, protocol.docs, file), 'utf8')
 
-const accountStructs = parseStructs(state)
-const eventStructs = parseStructs(events)
-const instructionNames = [...lib.matchAll(/pub fn (\w+)\(\s*ctx:\s*Context<(\w+)>/g)].map(
-  (match) => match[1],
-)
-const errorVariants = [
-  ...(/pub enum TranaError\s*\{([^}]*)\}/.exec(errors)?.[1] ?? '').matchAll(
-    /^\s*(\w+),\s*$/gm,
-  ),
-].map((match) => match[1])
-const seedLiterals = [...constants.matchAll(/pub const (\w+): &\[u8\] = b"([^"]+)";/g)].map(
-  (match) => ({ name: match[1], literal: match[2] }),
-)
+  const state = readSrc('state.rs')
+  const errors = readSrc('error.rs')
+  const constants = readSrc('constants.rs')
+  const lib = readSrc('lib.rs')
+  const events = readSrc('events.rs')
 
-describe('source extraction', () => {
-  it('found the four account structs', () => {
-    expect(accountStructs.map((struct) => struct.name)).toEqual([
-      'PoolConfig',
-      'LpPosition',
-      'Policy',
-      'MetricReport',
-    ])
+  const accountStructs = parseStructs(state)
+  const eventStructs = parseStructs(events)
+  const instructionNames = [...lib.matchAll(/pub fn (\w+)\(\s*ctx:\s*Context<(\w+)>/g)].map(
+    (match) => match[1],
+  )
+  const errorVariants = [
+    ...(/pub enum \w*Error\s*\{([^}]*)\}/.exec(errors)?.[1] ?? '').matchAll(
+      /^\s*(\w+),\s*$/gm,
+    ),
+  ].map((match) => match[1])
+  const seedLiterals = [...constants.matchAll(/pub const (\w+): &\[u8\] = b"([^"]+)";/g)].map(
+    (match) => ({ name: match[1], literal: match[2] }),
+  )
+
+  describe('source extraction', () => {
+    it('found the four account structs', () => {
+      expect(accountStructs.map((struct) => struct.name)).toEqual(protocol.accounts)
+    })
+
+    it('found the six instruction handlers', () => {
+      expect(instructionNames).toEqual([
+        'initialize_pool',
+        'deposit_capital',
+        'buy_policy',
+        protocol.report,
+        'settle_policy',
+        'withdraw_capital',
+      ])
+    })
+
+    it('found the error variants and seed literals', () => {
+      expect(errorVariants.length).toBe(11)
+      expect(seedLiterals).toHaveLength(5)
+    })
   })
 
-  it('found the six instruction handlers', () => {
-    expect(instructionNames).toHaveLength(6)
-    expect(instructionNames).toEqual([
-      'initialize_pool',
-      'deposit_capital',
-      'buy_policy',
-      'report_metric',
-      'settle_policy',
-      'withdraw_capital',
-    ])
+  describe('accounts doc matches state.rs', () => {
+    const accountsDoc = readDoc('protocol/accounts.md')
+
+    it.each(accountStructs)('$name documents the correct allocation', (struct) => {
+      const initSpace = initSpaceOf(struct)
+      const section = sectionFor(accountsDoc, struct.name)
+      const match = /space = 8 \+ (\d+) = (\d+)/.exec(section)
+      expect(match, `${struct.name}: no "space = 8 + N = M" claim in its section`).not.toBeNull()
+      expect(Number(match![1]), `${struct.name}: INIT_SPACE`).toBe(initSpace)
+      expect(Number(match![2]), `${struct.name}: allocated space`).toBe(initSpace + 8)
+    })
+
+    it.each(accountStructs)('$name documents every field', (struct) => {
+      const section = sectionFor(accountsDoc, struct.name)
+      const missing = struct.fields
+        .map((field) => field.name)
+        .filter((name) => !section.includes(`\`${name}\``))
+      expect(missing, `${struct.name}: undocumented fields`).toEqual([])
+    })
   })
 
-  it('found the error variants and seed literals', () => {
-    expect(errorVariants.length).toBe(11)
-    expect(seedLiterals).toHaveLength(5)
-  })
-})
+  describe('errors doc matches error.rs', () => {
+    const errorsDoc = readDoc('reference/errors.md')
 
-describe('accounts doc matches state.rs', () => {
-  const accountsDoc = readDoc('protocol/accounts.md')
+    it('lists every variant with the right code', () => {
+      const documented = new Map(
+        [...errorsDoc.matchAll(/^\|\s*(\d+)\s*\|\s*`(\w+)`\s*\|/gm)].map((match) => [
+          Number(match[1]),
+          match[2],
+        ]),
+      )
+      const expected = errorVariants.map((name, index) => [6000 + index, name] as const)
+      expect([...documented.entries()]).toEqual(expected)
+    })
 
-  it.each(accountStructs)('$name documents the correct allocation', (struct) => {
-    const initSpace = initSpaceOf(struct)
-    const section = sectionFor(accountsDoc, struct.name)
-    const match = /space = 8 \+ (\d+) = (\d+)/.exec(section)
-    expect(match, `${struct.name}: no "space = 8 + N = M" claim in its section`).not.toBeNull()
-    expect(Number(match![1]), `${struct.name}: INIT_SPACE`).toBe(initSpace)
-    expect(Number(match![2]), `${struct.name}: allocated space`).toBe(initSpace + 8)
-  })
-
-  it.each(accountStructs)('$name documents every field', (struct) => {
-    const section = sectionFor(accountsDoc, struct.name)
-    const missing = struct.fields
-      .map((field) => field.name)
-      .filter((name) => !section.includes(`\`${name}\``))
-    expect(missing, `${struct.name}: undocumented fields`).toEqual([])
-  })
-})
-
-describe('errors doc matches error.rs', () => {
-  const errorsDoc = readDoc('reference/errors.md')
-
-  it('lists every variant with the right code', () => {
-    const documented = new Map(
-      [...errorsDoc.matchAll(/^\|\s*(\d+)\s*\|\s*`(\w+)`\s*\|/gm)].map((match) => [
-        Number(match[1]),
-        match[2],
-      ]),
-    )
-    const expected = errorVariants.map((name, index) => [6000 + index, name] as const)
-    expect([...documented.entries()]).toEqual(expected)
+    it('does not document variants that no longer exist', () => {
+      const documentedNames = [...errorsDoc.matchAll(/^\|\s*\d+\s*\|\s*`(\w+)`\s*\|/gm)].map(
+        (match) => match[1],
+      )
+      const stale = documentedNames.filter((name) => !errorVariants.includes(name))
+      expect(stale, 'documented error variants absent from error.rs').toEqual([])
+    })
   })
 
-  it('does not document variants that no longer exist', () => {
-    const documentedNames = [...errorsDoc.matchAll(/^\|\s*\d+\s*\|\s*`(\w+)`\s*\|/gm)].map(
-      (match) => match[1],
-    )
-    const stale = documentedNames.filter((name) => !errorVariants.includes(name))
-    expect(stale, 'documented error variants absent from error.rs').toEqual([])
-  })
-})
+  describe('seeds doc matches constants.rs', () => {
+    const seedsDoc = readDoc('reference/seeds.md')
 
-describe('seeds doc matches constants.rs', () => {
-  const seedsDoc = readDoc('reference/seeds.md')
+    it.each(seedLiterals)('$name is documented as b"$literal"', ({ literal }) => {
+      expect(seedsDoc).toContain(`b"${literal}"`)
+    })
 
-  it.each(seedLiterals)('$name is documented as b"$literal"', ({ literal }) => {
-    expect(seedsDoc).toContain(`b"${literal}"`)
-  })
-
-  it('documents FEE_DENOMINATOR', () => {
-    const denominator = /pub const FEE_DENOMINATOR: u64 = ([\d_]+);/.exec(constants)?.[1]
-    expect(denominator, 'FEE_DENOMINATOR not found in constants.rs').toBeDefined()
-    const plain = denominator!.replaceAll('_', '')
-    expect(seedsDoc.replaceAll('_', '')).toContain(plain)
-  })
-})
-
-describe('instruction reference matches lib.rs', () => {
-  const instructionsDoc = readDoc('reference/instructions.md')
-  const instructionsPage = readDoc('protocol/instructions.md')
-
-  it.each(instructionNames)('%s is in the reference', (name) => {
-    expect(instructionsDoc).toContain(`## \`${name}`)
+    it('documents FEE_DENOMINATOR', () => {
+      const denominator = /pub const FEE_DENOMINATOR: u64 = ([\d_]+);/.exec(constants)?.[1]
+      expect(denominator, 'FEE_DENOMINATOR not found in constants.rs').toBeDefined()
+      const plain = denominator!.replaceAll('_', '')
+      expect(seedsDoc.replaceAll('_', '')).toContain(plain)
+    })
   })
 
-  it.each(instructionNames)('%s is in the instruction guide', (name) => {
-    expect(instructionsPage).toContain(`## \`${name}\``)
+  describe('instruction reference matches lib.rs', () => {
+    const instructionsDoc = readDoc('reference/instructions.md')
+    const instructionsPage = readDoc('protocol/instructions.md')
+
+    it.each(instructionNames)('%s is in the reference', (name) => {
+      expect(instructionsDoc).toContain(`## \`${name}`)
+    })
+
+    it.each(instructionNames)('%s is in the instruction guide', (name) => {
+      expect(instructionsPage).toContain(`## \`${name}\``)
+    })
+
+    it('does not reference instructions that do not exist', () => {
+      const stale = ['request_withdrawal'].filter((name) => instructionNames.includes(name))
+      expect(stale, 'documented instructions absent from lib.rs').toEqual([])
+      expect(instructionsDoc).not.toContain('request_withdrawal')
+    })
   })
 
-  it('does not reference instructions that do not exist', () => {
-    const stale = ['request_withdrawal'].filter((name) => instructionNames.includes(name))
-    expect(stale, 'documented instructions absent from lib.rs').toEqual([])
-    expect(instructionsDoc).not.toContain('request_withdrawal')
-  })
-})
+  describe('events doc matches events.rs', () => {
+    const eventsDoc = readDoc('reference/events.md')
 
-describe('events doc matches events.rs', () => {
-  const eventsDoc = readDoc('reference/events.md')
+    it.each(eventStructs)('$name is documented with all its fields', (event) => {
+      const section = sectionFor(eventsDoc, event.name)
+      const missing = event.fields
+        .map((field) => field.name)
+        .filter((name) => !section.includes(`pub ${name}:`))
+      expect(missing, `${event.name}: undocumented fields`).toEqual([])
+    })
 
-  it.each(eventStructs)('$name is documented with all its fields', (event) => {
-    const section = sectionFor(eventsDoc, event.name)
-    const missing = event.fields
-      .map((field) => field.name)
-      .filter((name) => !section.includes(`pub ${name}:`))
-    expect(missing, `${event.name}: undocumented fields`).toEqual([])
+    it('documents exactly the events the program defines', () => {
+      expect(eventStructs).toHaveLength(6)
+    })
   })
 
-  it('documents exactly the events the program defines', () => {
-    expect(eventStructs).toHaveLength(6)
-  })
-})
+  describe('stated counts match the program', () => {
+    const scope = readDoc('introduction/scope.md')
 
-describe('stated counts match the program', () => {
-  const scope = readDoc('introduction/scope.md')
+    const countOf = (label: string): number => {
+      const match = new RegExp(`\\|\\s*${label}\\s*\\|\\s*(\\d+)\\s*\\|`).exec(scope)
+      expect(match, `no "${label}" row in scope.md`).not.toBeNull()
+      return Number(match![1])
+    }
 
-  const countOf = (label: string): number => {
-    const match = new RegExp(`\\|\\s*${label}\\s*\\|\\s*(\\d+)\\s*\\|`).exec(scope)
-    expect(match, `no "${label}" row in scope.md`).not.toBeNull()
-    return Number(match![1])
-  }
+    it('reports the right number of instructions', () => {
+      expect(countOf('Instructions')).toBe(instructionNames.length)
+    })
 
-  it('reports the right number of instructions', () => {
-    expect(countOf('Instructions')).toBe(instructionNames.length)
-  })
+    it('reports the right number of account types', () => {
+      expect(countOf('Account types')).toBe(accountStructs.length)
+    })
 
-  it('reports the right number of account types', () => {
-    expect(countOf('Account types')).toBe(accountStructs.length)
-  })
+    it('reports the right number of error variants', () => {
+      expect(countOf('Error variants')).toBe(errorVariants.length)
+    })
 
-  it('reports the right number of error variants', () => {
-    expect(countOf('Error variants')).toBe(errorVariants.length)
-  })
+    it('reports the right number of events', () => {
+      expect(countOf('Events')).toBe(eventStructs.length)
+    })
 
-  it('reports the right number of events', () => {
-    expect(countOf('Events')).toBe(eventStructs.length)
-  })
-
-  it('reports the right number of outbound CPIs', () => {
-    const shared = readSrc('instructions/shared.rs')
-    const cpis = [...shared.matchAll(/\btransfer\(/g)].length
-    expect(countOf('Outbound CPIs')).toBe(cpis)
+    it('reports the right number of outbound CPIs', () => {
+      const shared = readSrc('instructions/shared.rs')
+      const cpis = [...shared.matchAll(/\btransfer\(/g)].length
+      expect(countOf('Outbound CPIs')).toBe(cpis)
+    })
   })
 })

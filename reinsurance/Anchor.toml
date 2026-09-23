@@ -1,0 +1,19 @@
+skip_local_validator = true
+
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+reinsurance = "En2EGbw2JuJkQbmgueXEN2XaiBjHvzf4bPwCrUyTqMNf"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cargo nextest run"
+
+[hooks]
