@@ -1,0 +1,271 @@
+{
+  "address": "HKygNZod2WmpPzDVHjcdv7kpd74t68zH9sE4Kp1mxAQP",
+  "metadata": {
+    "name": "freight_delay",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initializePool",
+      "discriminator": [95, 180, 10, 172, 84, 174, 232, 40],
+      "accounts": [
+        { "name": "admin", "signer": true, "writable": true },
+        { "name": "usdcMint" },
+        { "name": "config", "writable": true },
+        { "name": "treasury", "writable": true },
+        { "name": "tokenProgram", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "feeBps", "type": "u16" },
+        { "name": "oracleAuthority", "type": "pubkey" }
+      ]
+    },
+    {
+      "name": "depositCapital",
+      "discriminator": [157, 98, 40, 41, 205, 210, 121, 253],
+      "accounts": [
+        { "name": "lp", "signer": true, "writable": true },
+        { "name": "config", "writable": true },
+        { "name": "usdcMint" },
+        { "name": "treasury", "writable": true },
+        { "name": "lpUsdc", "writable": true },
+        { "name": "lpPosition", "writable": true },
+        { "name": "tokenProgram", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "buyPolicy",
+      "discriminator": [0, 59, 201, 101, 183, 3, 41, 24],
+      "accounts": [
+        { "name": "insured", "signer": true, "writable": true },
+        { "name": "config", "writable": true },
+        { "name": "usdcMint" },
+        { "name": "treasury", "writable": true },
+        { "name": "insuredUsdc", "writable": true },
+        { "name": "policy", "writable": true },
+        { "name": "tokenProgram", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "policyId", "type": "u64" },
+        { "name": "shipmentId", "type": "u64" },
+        { "name": "expectedDelivery", "type": "i64" },
+        { "name": "gracePeriod", "type": "i64" },
+        { "name": "payoutAmount", "type": "u64" },
+        { "name": "premiumAmount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "reportDeliveryMilestone",
+      "discriminator": [172, 147, 67, 43, 23, 132, 43, 225],
+      "accounts": [
+        { "name": "reporter", "signer": true, "writable": true },
+        { "name": "config" },
+        { "name": "deliveryReport", "writable": true },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "shipmentId", "type": "u64" },
+        { "name": "actualDelivery", "type": "i64" },
+        { "name": "terminalCode", "type": "u64" }
+      ]
+    },
+    {
+      "name": "settlePolicy",
+      "discriminator": [180, 234, 21, 174, 50, 214, 91, 113],
+      "accounts": [
+        { "name": "crank", "signer": true, "writable": true },
+        { "name": "config", "writable": true },
+        { "name": "usdcMint" },
+        { "name": "treasury", "writable": true },
+        { "name": "policy", "writable": true },
+        { "name": "deliveryReport" },
+        { "name": "insuredUsdc", "writable": true },
+        { "name": "tokenProgram", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdrawCapital",
+      "discriminator": [82, 32, 82, 118, 160, 116, 65, 104],
+      "accounts": [
+        { "name": "lp", "signer": true, "writable": true },
+        { "name": "config", "writable": true },
+        { "name": "usdcMint" },
+        { "name": "treasury", "writable": true },
+        { "name": "lpUsdc", "writable": true },
+        { "name": "lpPosition", "writable": true },
+        { "name": "tokenProgram", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
+      ],
+      "args": [{ "name": "shares", "type": "u64" }]
+    }
+  ],
+  "accounts": [
+    { "name": "PoolConfig", "discriminator": [26, 108, 14, 123, 116, 230, 129, 43] },
+    { "name": "LpPosition", "discriminator": [105, 241, 37, 200, 224, 2, 252, 90] },
+    { "name": "Policy", "discriminator": [222, 135, 7, 163, 235, 177, 33, 68] },
+    { "name": "DeliveryReport", "discriminator": [108, 71, 51, 82, 1, 93, 22, 162] }
+  ],
+  "events": [
+    { "name": "PoolInitialized", "discriminator": [100, 118, 173, 87, 12, 198, 254, 229] },
+    { "name": "CapitalDeposited", "discriminator": [193, 124, 182, 129, 144, 1, 221, 53] },
+    { "name": "PolicyPurchased", "discriminator": [120, 100, 255, 218, 16, 36, 194, 192] },
+    { "name": "DeliveryReported", "discriminator": [30, 205, 42, 243, 160, 121, 88, 35] },
+    { "name": "PolicySettled", "discriminator": [67, 45, 149, 235, 199, 184, 83, 77] },
+    { "name": "CapitalWithdrawn", "discriminator": [202, 30, 139, 204, 45, 210, 182, 244] }
+  ],
+  "types": [
+    {
+      "name": "PoolConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "pubkey" },
+          { "name": "oracleAuthority", "type": "pubkey" },
+          { "name": "usdcMint", "type": "pubkey" },
+          { "name": "treasury", "type": "pubkey" },
+          { "name": "totalCapital", "type": "u64" },
+          { "name": "totalLockedRisk", "type": "u64" },
+          { "name": "totalShares", "type": "u64" },
+          { "name": "totalFees", "type": "u64" },
+          { "name": "feeBps", "type": "u16" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "LpPosition",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "lp", "type": "pubkey" },
+          { "name": "shares", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Policy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "insured", "type": "pubkey" },
+          { "name": "policyId", "type": "u64" },
+          { "name": "shipmentId", "type": "u64" },
+          { "name": "expectedDelivery", "type": "i64" },
+          { "name": "gracePeriod", "type": "i64" },
+          { "name": "payoutAmount", "type": "u64" },
+          { "name": "premiumAmount", "type": "u64" },
+          { "name": "isSettled", "type": "bool" },
+          { "name": "isPaid", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "DeliveryReport",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "shipmentId", "type": "u64" },
+          { "name": "actualDelivery", "type": "i64" },
+          { "name": "terminalCode", "type": "u64" },
+          { "name": "timestamp", "type": "i64" },
+          { "name": "reporter", "type": "pubkey" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "PoolInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "usdcMint", "type": "pubkey" },
+          { "name": "treasury", "type": "pubkey" },
+          { "name": "admin", "type": "pubkey" },
+          { "name": "oracleAuthority", "type": "pubkey" },
+          { "name": "feeBps", "type": "u16" }
+        ]
+      }
+    },
+    {
+      "name": "CapitalDeposited",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "lp", "type": "pubkey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "sharesMinted", "type": "u64" },
+          { "name": "totalCapital", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "PolicyPurchased",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "policy", "type": "pubkey" },
+          { "name": "insured", "type": "pubkey" },
+          { "name": "policyId", "type": "u64" },
+          { "name": "shipmentId", "type": "u64" },
+          { "name": "expectedDelivery", "type": "i64" },
+          { "name": "gracePeriod", "type": "i64" },
+          { "name": "payoutAmount", "type": "u64" },
+          { "name": "premiumAmount", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "DeliveryReported",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "shipmentId", "type": "u64" },
+          { "name": "actualDelivery", "type": "i64" },
+          { "name": "terminalCode", "type": "u64" },
+          { "name": "timestamp", "type": "i64" },
+          { "name": "reporter", "type": "pubkey" }
+        ]
+      }
+    },
+    {
+      "name": "PolicySettled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "policy", "type": "pubkey" },
+          { "name": "insured", "type": "pubkey" },
+          { "name": "triggered", "type": "bool" },
+          { "name": "payoutAmount", "type": "u64" },
+          { "name": "actualDelivery", "type": "i64" },
+          { "name": "expectedDelivery", "type": "i64" },
+          { "name": "gracePeriod", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "CapitalWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "config", "type": "pubkey" },
+          { "name": "lp", "type": "pubkey" },
+          { "name": "sharesBurned", "type": "u64" },
+          { "name": "amount", "type": "u64" },
+          { "name": "totalCapital", "type": "u64" }
+        ]
+      }
+    }
+  ]
+}
