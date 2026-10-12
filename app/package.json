@@ -1,0 +1,39 @@
+{
+  "name": "trana-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite",
+    "format": "oxfmt src scripts",
+    "format:check": "oxfmt --check src scripts",
+    "lint": "oxlint src",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "wallet:export": "bun scripts/export-cli-wallet.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/wallet-adapter-base": "^0.9.27",
+    "@solana/wallet-adapter-react": "^0.15.39",
+    "@solana/wallet-adapter-react-ui": "^0.9.39",
+    "@solana/wallet-adapter-wallets": "^0.19.36",
+    "@solana/web3.js": "^1.98.4",
+    "buffer": "^6.0.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^6.0.2",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.0",
+    "vitest": "^3.2.4"
+  }
+}

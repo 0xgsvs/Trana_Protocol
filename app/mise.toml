@@ -1,0 +1,5 @@
+# Pinned toolchain for the Trana frontend (per CHA-22).
+# Run `mise trust` once per clone, then `mise install`.
+
+[tools]
+bun = "1.4.2"
